@@ -1,0 +1,3 @@
+#!/usr/bin/sh
+
+rm -r gcm.cache *.o main

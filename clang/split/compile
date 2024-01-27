@@ -1,0 +1,39 @@
+#!/usr/bin/sh
+
+# works with clang 16.0.6
+
+# compile everyting separately, this is possibly the fastest way to compile
+# with proper use of paralelization
+
+# create pcm files for header libraries:
+# precompile all the necesary standard headers, use the option
+# `-xc++-system-header` so that the compiler knows that it is a system header
+clang++ -c -std=c++20 -xc++-system-header --precompile iostream -o iostream.pcm
+clang++ -c -std=c++20 -xc++-system-header --precompile string -o string.pcm
+
+# create pcm files for your modules:
+# precompile the greet module, the standard libraries must be added with the
+# option `-fmodule-file`, here the option `-fprebuild-module-path` is
+# unnecesary, but it is better to have it in case this module would import
+# other modules
+# The module file must have extension `cppm`, `ccm`, `cxxm` or `c++m`. If it
+# has different extension you must add `-x c++-module` to the arguments. E.g.
+# if `greet.cppm` was instead called `greet.cpp`:
+# ```
+# clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm --precompile -x c++-module greet.cppm -o greet.pcm
+# ```
+clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm --precompile greet.cppm -o greet.pcm
+
+# compile the modules:
+# all pcm files must also be compiled to object files.
+clang++ -c -std=c++20 greet.pcm -o greet.o
+
+# compile cpp files:
+# now compile all your cpp files, you still need to add the `-fmodule-file`
+# option for all standard libraries. The other modules in this project are
+# searched with the `-fprebuilt-module-path` argument
+clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm -fmodule-file=iostream.pcm greet-impl.cpp -o greet-impl.o
+clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm main.cpp -o main.o
+
+# link everything together.
+clang++ -std=c++20 main.o greet-impl.o greet.o -o main

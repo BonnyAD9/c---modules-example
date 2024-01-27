@@ -1,0 +1,36 @@
+#!/usr/bin/sh
+
+# works with clang 16.0.6
+
+# this joins the compilation and precompilation of modules into a single step
+
+# create pcm files for header libraries:
+# precompile all the necesary standard headers, use the option
+# `-xc++-system-header` so that the compiler knows that it is a system header
+clang++ -c -std=c++20 -xc++-system-header --precompile iostream -o iostream.pcm
+clang++ -c -std=c++20 -xc++-system-header --precompile string -o string.pcm
+
+# compile your modules and create pcm files as side product:
+# precompile the greet module, the standard libraries must be added with the
+# option `-fmodule-file`, here the option `-fprebuild-module-path` is
+# unnecesary, but it is better to have it in case this module would import
+# other modules. The option `-fmodule-output` specifies that the compiler
+# should also create pcm file as a side product.
+# The module file must have extension `cppm`, `ccm`, `cxxm` or `c++m`. If it
+# has different extension you must add `-x c++-module` to the arguments. E.g.
+# if `greet.cppm` was instead called `greet.cpp`:
+# ```
+# clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm -fmodule-file=iostream.pcm -fmodule-output=greet.pcm -x c++-module greet.cpp -o greet.o
+# ```
+clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm -fmodule-file=iostream.pcm -fmodule-output=greet.pcm greet.cppm -o greet.o
+
+# compile cpp files
+# now compile all your cpp files, you still need to add the `-fmodule-file`
+# option for all standard libraries. The other modules in this project are
+# searched with the `-fprebuilt-module-path` argument
+clang++ -c -std=c++20 -fprebuilt-module-path=. -fmodule-file=string.pcm main.cpp -o main.o
+
+# link everything together. All precompiled modules must be also added to the
+# process (this does not apply to header modules (imported with
+# `import <file>;` or `import "file";`)
+clang++ -std=c++20 main.o greet.o -o main

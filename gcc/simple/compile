@@ -1,0 +1,21 @@
+#!/usr/bin/sh
+
+# works with gcc 13.2.1
+
+# First you need to compile the headers:
+# the option `-fmodules-ts` enables modules in compilation.
+# `-x c++-system-header` tells the compiler that we are compiling a system
+# header file. This will create the precompiled files in folder `gcm.cache`.
+g++ -c -std=c++20 -fmodules-ts -x c++-system-header iostream
+g++ -c -std=c++20 -fmodules-ts -x c++-system-header string
+
+# Second step is to compile the cpp files, `-fmodules-ts` is used to enable
+# the modules. This ill create the precompiled files in folder `gcm.cache`
+g++ -c -std=c++20 -fmodules-ts greet.cpp -o greet.o
+g++ -c -std=c++20 -fmodules-ts main.cpp -o main.o
+
+# now link everything together
+g++ -std=c++20 main.o greet.o -o main
+
+# see https://gcc.gnu.org/onlinedocs/gcc/gcc-command-options/c%2B%2B-modules.html#c-module-mapper
+# for info about how to change the `gcm.cache` folder
